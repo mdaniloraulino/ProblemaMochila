@@ -10,18 +10,13 @@ style.use('fivethirtyeight')
 
 dt = pd.read_excel('Tabela_Artigos.xls')
 
-class Item:
-    def __init__(self, artigo, volume, peso, valor):
-        self.artigo = artigo
-        self.volume = volume
-        self.peso = peso
-        self.valor = valor
-        
 class Bag:
+
     def __init__(self, itens):
         self.itens = itens
         self.fitness = int(0)
         self.vlTotal, self.peso, self.volume = 0, 0, 0
+        
     def __repr__(self):
         return f'fitness:{self.fitness}, Itens:{self.itens} Valor/Peso/Volume: {self.vlTotal}/{self.peso}/{self.volume}'
     
@@ -29,45 +24,46 @@ class Bag:
         vlT, p, v = 0, 0, 0
         for i in range(25):
             if self.itens[i] == 1:
-                vlT = vlT + dt.iloc[i].values[3]
-                p = p + dt.iloc[i].values[2]
-                v = v + dt.iloc[i].values[1]
-        if not elitista:
-            if (p) == 0 :
-                self.fitness = 0 
-            elif p + v == 250:
-                self.fitness = vlT
-            else:
-                self.fitness = vlT / (p + v) + abs(125 - p) + abs(125 - v)
-        else:
-            if p > 125 or v > 125:
-                self.fitness = 0
-            else:
-                self.fitness = vlT
+                vlT = vlT + itemMatrix[i][3]
+                p = p + itemMatrix[i][2]
+                v = v + itemMatrix[i][1]
+        
+        #A cada ponto acima do limite de peso ou volume é descontada como porcentagem do valor do item.
+        if v > 125:
+            vlT = vlT - (vlT * ((v-125) / 100))
+        if p > 125:
+            vlT = vlT - (vlT * ((p-125) / 100))
+        self.fitness = vlT
+        
+        #Variaveis informativas
         self.peso = p
         self.vlTotal = vlT
         self.volume = v
         return self.fitness
         
     def doMutation(self):
-        for i in range(3):
+        i = 5
+        while i >= 0:
             randIndex = np.random.randint(0,25)
             if self.itens[randIndex] == 0:
                 self.itens[randIndex] = 1
             else:
                 self.itens[randIndex] = 0
-
+            i -= 1
+            
 def initPopulation(size):
     pop = []
-    for i in range(size):
+    while size >= 0:
         a = np.random.randint(low=0,high=2,size=25)
         pop.append(Bag(a.tolist()))
+        size -= 1
+    stop = time.perf_counter()
     return np.array(pop)
 
 def calculatePopFitness(pop):
     global theBest, theBestFromGen
     for bag in pop:
-        fit = bag.calculateFitness(True)
+        fit = bag.calculateFitness(False)
         if fit > theBestFromGen.fitness:
             theBestFromGen = copy.copy(bag)
     return pop
@@ -75,7 +71,7 @@ def calculatePopFitness(pop):
 def naturalSelection(pop,numToSelection):
     max = sum([bag.fitness for bag in pop])
     selection_probs = [bag.fitness/max for bag in pop]
-    felizardos = (pop[np.random.choice(len(pop),size=numToSelection,replace = False, p=selection_probs)])
+    felizardos = pop[np.random.choice(len(pop),size=numToSelection,replace = False, p=selection_probs)]
     return felizardos
 
 def iniciaCrossover(pop):
@@ -90,16 +86,17 @@ def crossover(bag1, bag2):
     corte2 = np.random.randint(0,24)
     if corte2 >= corte1:
         corte2 += 1
-    else:  # Swap the two cx points
+    else:
         corte1, corte2 = corte2, corte1
     son1 = bag1.itens[:corte1] + bag2.itens[corte1:corte2] + bag1.itens[corte2:]
     son2 = bag2.itens[:corte1] + bag1.itens[corte1:corte2] + bag2.itens[corte2:]
     return [Bag(son1), Bag(son2)]
 
 def mutatePop(pop):
-    toMutate = round(len(pop)* 0.03)
-    for i in range(toMutate):
+    toMutate = round(len(pop) * 0.03)
+    while toMutate >= 0 :
         pop[np.random.randint(0,len(pop))].doMutation()
+        toMutate -= 1
     return pop
 
 def saveGraph(epoca):
@@ -116,10 +113,12 @@ ax1 = fig.add_subplot(1,1,1)
 theBest = Bag([])
 theBestFromGen = Bag([])
 meanFit = []
-for i in range(250):
+start = time.process_time()
+gen = 1
+for i in range(gen):
     theBestFromGen = Bag([])
     population = calculatePopFitness(population)
-    population = naturalSelection(population,800)
+    population = naturalSelection(population,700)
     population = iniciaCrossover(population)
     population = mutatePop(population)
     if theBestFromGen.fitness > theBest.fitness:
@@ -128,4 +127,5 @@ for i in range(250):
     meanFit.append(maximo/len(population))
     print(f'-------------------\nGEN {i+1}\nTB: {theBest}\nTBG: {theBestFromGen}\n-------------------')
     saveGraph(i+1)
-print("FIM")
+stop = time.process_time()   
+print(f'Finalizado\nExecutada {gen} gerações em {stop - start} segundos\nMelhor Solução: {theBest}')
