@@ -4,11 +4,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import copy
+import time
 from matplotlib import style
-from operator import attrgetter
 style.use('fivethirtyeight')
 
 dt = pd.read_excel('Tabela_Artigos.xls')
+itemMatrix = dt.values
 
 class Bag:
 
@@ -105,7 +106,7 @@ def saveGraph(epoca):
         epochList = np.arange(epoca)
         ax1.clear()
         ax1.plot(epochList,meanFit)
-        plt.savefig('c:\\Users\\Danilo\\desktop\\epocas\\epoca.png')
+        plt.savefig('epoca.png')
 
 population = initPopulation(1000)
 fig = plt.figure()
@@ -114,7 +115,7 @@ theBest = Bag([])
 theBestFromGen = Bag([])
 meanFit = []
 start = time.process_time()
-gen = 1
+gen = 500
 for i in range(gen):
     theBestFromGen = Bag([])
     population = calculatePopFitness(population)
